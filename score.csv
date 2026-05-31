@@ -1,0 +1,12 @@
+model, score, score_reduction
+baseline, 0.75943
+bureau, 0.76602, 0.76844
+bu+prev, 0.77540, 0.7764
+bu+prev_magic, 0.78415, 0.78439
+bu+prev+install+credit, 0.78581, 0.78580
+bu+prev+install+credit+3model, 0.78480, 0.79010
+bu+prev+install+credit+3model+timewindow, 0.78590, 0.79171
+bu+prev+install+credit+3model+timewindow+stacking, 0.78590, 0.79147
+bu+prev+install+credit+3model+timewindow+off, 0.78537, 0.79158
+bu+prev+install+credit+3model+timewindow+pos+bubalance, 0.78747, 0.79313
+feat, , 0.79320

@@ -1,0 +1,19 @@
+application_{train|test}.csv（主表）
+    核心數據：這是最主要的檔案。每一行代表一個貸款申請案。
+    目標變數 (TARGET)：1 代表違約（有還款困難），0 代表正常按時還款。
+    內容：申請人的基本資料（年齡、性別、職業、收入）、貸款行為（貸款金額、年金）以及外部評分。
+
+bureau.csv & bureau_balance.csv
+    包含申請人在其他金融機構過往的信用紀錄（來自信用局 Credit Bureau）。
+
+previous_application.csv
+    申請人過去在 Home Credit 的所有貸款申請歷史（不論最後是核准還是拒絕）。
+
+POS_CASH_balance.csv
+    過去貸款的每月通話費或銷售點（POS）現金餘額快照。
+
+credit_card_balance.csv
+    申請人過去在 Home Credit 持有的信用卡月度明細。
+
+installments_payments.csv
+    過去貸款的實際還款紀錄（可以看出有沒有遲到、少給錢）。
