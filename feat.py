@@ -156,7 +156,7 @@ def objective(weights):
     return -roc_auc_score(y_train, blend) # 加上負號因為 minimize 是找最小值
 
 # 2. 設定初始權重與限制條件
-init_weights = [0.4, 0.4, 0.2]
+init_weights = [0.293, 0.397, 0.310]
 bounds = [(0, 1), (0, 1), (0, 1)] # 權重必須在 0~1 之間
 constraints = ({'type': 'eq', 'fun': lambda w: 1 - sum(w)}) # 權重相加等於 1
 
@@ -167,7 +167,7 @@ best_w1, best_w2, best_w3 = res.x
 print(f"\n🎯 搜尋到的黃金權重比例 -> LGB: {best_w1:.3f}, CAT: {best_w2:.3f}, XGB: {best_w3:.3f}")
 
 # 4. 用黃金權重計算最終結果
-# 目前最大的比例是 LGB: 0.296, CAT: 0.400, XGB: 0.304, AUC: 0.79320
+# 目前最大的比例是 LGB: 0.293, CAT: 0.397, XGB: 0.310, AUC: 0.79325
 opt_oof = (best_w1 * lgb_oof) + (best_w2 * cat_oof) + (best_w3 * xgb_oof)
 print(f"🚀 優化權重後的 OOF AUC: {roc_auc_score(y_train, opt_oof):.5f}")
 
