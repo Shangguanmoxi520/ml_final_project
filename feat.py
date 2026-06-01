@@ -15,6 +15,10 @@ from catboost import CatBoostClassifier, Pool
 from scipy.optimize import minimize
 import joblib
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, roc_curve, auc, precision_recall_curve, average_precision_score
+
 print("🚀 正在直接載入黃金特徵矩陣...")
 # 一秒載入，完全不需要重跑任何特徵工程！
 features_data = joblib.load('reduced_features_dataset.pkl')
@@ -163,6 +167,7 @@ best_w1, best_w2, best_w3 = res.x
 print(f"\n🎯 搜尋到的黃金權重比例 -> LGB: {best_w1:.3f}, CAT: {best_w2:.3f}, XGB: {best_w3:.3f}")
 
 # 4. 用黃金權重計算最終結果
+# 目前最大的比例是 LGB: 0.296, CAT: 0.400, XGB: 0.304, AUC: 0.79320
 opt_oof = (best_w1 * lgb_oof) + (best_w2 * cat_oof) + (best_w3 * xgb_oof)
 print(f"🚀 優化權重後的 OOF AUC: {roc_auc_score(y_train, opt_oof):.5f}")
 
@@ -172,3 +177,78 @@ test_df = pd.read_csv('home-credit-default-risk/application_test.csv')
 opt_preds = (best_w1 * lgb_preds) + (best_w2 * cat_preds) + (best_w3 * xgb_preds)
 sub = pd.DataFrame({'SK_ID_CURR': test_df['SK_ID_CURR'], 'TARGET': opt_preds})
 sub.to_csv('optimized_blend_submission.csv', index=False)
+
+# 假設：
+# y_true = y_train (真實的 0 與 1)
+# 找到畫圖腳本的這兩行，改成這樣：
+y_true = y_train.values if hasattr(y_train, 'values') else y_train
+y_pred_proba = opt_oof  # 👈 這裡直接填入你的 opt_oof！
+
+# 為了混淆矩陣，我們需要設定一個機率門檻 (預設 0.5，但風控賽事通常會因不平衡而調低)
+# 這裡我們用能讓 F1-score 最大的門檻，或是直接用常規的 0.5
+threshold = 0.5
+y_pred_labels = (y_pred_proba >= threshold).astype(int)
+
+# ========================================================
+# 🎨 開始畫圖 (1×3 的畫布)
+# ========================================================
+fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+
+# --------------------------------------------------------
+# 圖 1：Confusion Matrix (混淆矩陣)
+# --------------------------------------------------------
+cm = confusion_matrix(y_true, y_pred_labels)
+# 轉換成百分比，更直觀
+cm_percent = cm / cm.sum(axis=1)[:, np.newaxis]
+
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[0], cbar=False,
+            annot_kws={'size': 14, 'weight': 'bold'})
+# 在數字下方加上百分比標籤
+for i in range(2):
+    for j in range(2):
+        axes[0].text(j+0.5, i+0.7, f"({cm_percent[i, j]:.1%})", 
+                     ha='center', va='center', color='black' if cm[i, j] < cm.max()/2 else 'white', fontsize=11)
+
+axes[0].set_title('Confusion Matrix', fontsize=14, pad=15)
+axes[0].set_xlabel('Predicted Label (0: Good, 1: Default)', fontsize=12)
+axes[0].set_ylabel('True Label (0: Good, 1: Default)', fontsize=12)
+axes[0].set_xticklabels(['Good (0)', 'Default (1)'])
+axes[0].set_yticklabels(['Good (0)', 'Default (1)'])
+
+# --------------------------------------------------------
+# 圖 2：ROC Curve (接收者操作特徵曲線)
+# --------------------------------------------------------
+fpr, tpr, _ = roc_curve(y_true, y_pred_proba)
+roc_auc = auc(fpr, tpr)
+
+axes[1].plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.5f})')
+axes[1].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+axes[1].set_xlim([0.0, 1.0])
+axes[1].set_ylim([0.0, 1.05])
+axes[1].set_xlabel('False Positive Rate (1 - Specificity)', fontsize=12)
+axes[1].set_ylabel('True Positive Rate (Sensitivity / Recall)', fontsize=12)
+axes[1].set_title('Receiver Operating Characteristic (ROC)', fontsize=14, pad=15)
+axes[1].legend(loc="lower right", fontsize=12)
+axes[1].grid(True, linestyle='--', alpha=0.6)
+
+# --------------------------------------------------------
+# 圖 3：PR Curve (精準率-召回率曲線)
+# --------------------------------------------------------
+precision, recall, _ = precision_recall_curve(y_true, y_pred_proba)
+average_precision = average_precision_score(y_true, y_pred_proba)
+
+axes[2].plot(recall, precision, color='green', lw=2, label=f'PR curve (AP = {average_precision:.5f})')
+# 隨機猜測基確線 (違約者佔總樣本的比例，此賽事大約 8%)
+basing_line = y_true.sum() / len(y_true)
+axes[2].plot([0, 1], [basing_line, basing_line], color='red', lw=2, linestyle='--', label=f'Baseline ({basing_line:.2%})')
+
+axes[2].set_xlim([0.0, 1.0])
+axes[2].set_ylim([0.0, 1.05])
+axes[2].set_xlabel('Recall (Sensitivity)', fontsize=12)
+axes[2].set_ylabel('Precision (Positive Predictive Value)', fontsize=12)
+axes[2].set_title('Precision-Recall (PR) Curve', fontsize=14, pad=15)
+axes[2].legend(loc="upper right", fontsize=12)
+axes[2].grid(True, linestyle='--', alpha=0.6)
+
+plt.tight_layout()
+plt.show()

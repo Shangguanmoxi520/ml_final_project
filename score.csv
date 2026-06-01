@@ -1,5 +1,5 @@
 model, score, score_reduction
-baseline, 0.75943
+baseline, 0.75943,
 bureau, 0.76602, 0.76844
 bu+prev, 0.77540, 0.7764
 bu+prev_magic, 0.78415, 0.78439
